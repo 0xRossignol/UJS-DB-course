@@ -47,6 +47,15 @@ function App() {
   const [showSubscriberModal, setShowSubscriberModal] = useState(false);
   const [showNewspaperModal, setShowNewspaperModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  
+  // 搜索状态
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState<{
+    subscribers: Subscriber[];
+    newspapers: Newspaper[];
+    subscriptions: Subscription[];
+  }>({ subscribers: [], newspapers: [], subscriptions: [] });
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -99,32 +108,263 @@ function App() {
   };
 
   const handleAddNewspaper = async (newspaper: CreateNewspaperDTO) => {
-    // 在实际应用中，这里会调用API
-    const newNewspaper: Newspaper = {
-      ...newspaper,
-      id: newspapers.length + 1,
-      description: newspaper.description || null,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-    setNewspapers([...newspapers, newNewspaper]);
-    alert('报刊添加成功！');
+    try {
+      const response = await fetch(`${API_BASE_URL}/newspapers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newspaper),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setNewspapers([...newspapers, result.data]);
+        alert('报刊添加成功！');
+      } else {
+        alert(`添加失败: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('添加报刊失败:', error);
+      alert('添加报刊失败，请检查网络连接');
+    }
   };
 
   const handleAddSubscription = async (subscription: CreateSubscriptionDTO) => {
-    // 在实际应用中，这里会调用API
-    const newSubscription: Subscription = {
-      ...subscription,
-      id: subscriptions.length + 1,
-      status: subscription.status || 'active',
-      start_date: new Date(subscription.start_date),
-      end_date: new Date(subscription.end_date),
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-    setSubscriptions([...subscriptions, newSubscription]);
-    alert('订阅添加成功！');
+    try {
+      const response = await fetch(`${API_BASE_URL}/subscriptions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(subscription),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setSubscriptions([...subscriptions, result.data]);
+        alert('订阅添加成功！');
+      } else {
+        alert(`添加失败: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('添加订阅失败:', error);
+      alert('添加订阅失败，请检查网络连接');
+    }
   };
+
+  // 删除订户
+  const handleDeleteSubscriber = async (id: number) => {
+    if (!window.confirm('确定要删除这个订户吗？')) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/subscribers/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setSubscribers(subscribers.filter(s => s.id !== id));
+        alert('订户删除成功！');
+      } else {
+        alert(`删除失败: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('删除订户失败:', error);
+      alert('删除订户失败，请检查网络连接');
+    }
+  };
+
+  // 更新订户
+  const handleEditSubscriber = async (updatedSubscriber: Subscriber) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/subscribers/${updatedSubscriber.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: updatedSubscriber.name,
+          email: updatedSubscriber.email,
+          phone: updatedSubscriber.phone,
+          address: updatedSubscriber.address,
+        }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setSubscribers(subscribers.map(s => 
+          s.id === updatedSubscriber.id ? result.data : s
+        ));
+        alert('订户更新成功！');
+      } else {
+        alert(`更新失败: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('更新订户失败:', error);
+      alert('更新订户失败，请检查网络连接');
+    }
+  };
+
+  // 删除报刊
+  const handleDeleteNewspaper = async (id: number) => {
+    if (!window.confirm('确定要删除这个报刊吗？')) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/newspapers/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setNewspapers(newspapers.filter(n => n.id !== id));
+        alert('报刊删除成功！');
+      } else {
+        alert(`删除失败: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('删除报刊失败:', error);
+      alert('删除报刊失败，请检查网络连接');
+    }
+  };
+
+  // 更新报刊
+  const handleEditNewspaper = async (updatedNewspaper: Newspaper) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/newspapers/${updatedNewspaper.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: updatedNewspaper.name,
+          publisher: updatedNewspaper.publisher,
+          frequency: updatedNewspaper.frequency,
+          price: updatedNewspaper.price,
+          description: updatedNewspaper.description,
+        }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setNewspapers(newspapers.map(n => 
+          n.id === updatedNewspaper.id ? result.data : n
+        ));
+        alert('报刊更新成功！');
+      } else {
+        alert(`更新失败: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('更新报刊失败:', error);
+      alert('更新报刊失败，请检查网络连接');
+    }
+  };
+
+  // 删除订阅
+  const handleDeleteSubscription = async (id: number) => {
+    if (!window.confirm('确定要删除这个订阅吗？')) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/subscriptions/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setSubscriptions(subscriptions.filter(s => s.id !== id));
+        alert('订阅删除成功！');
+      } else {
+        alert(`删除失败: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('删除订阅失败:', error);
+      alert('删除订阅失败，请检查网络连接');
+    }
+  };
+
+  // 更新订阅
+  const handleEditSubscription = async (updatedSubscription: Subscription) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/subscriptions/${updatedSubscription.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subscriber_id: updatedSubscription.subscriber_id,
+          newspaper_id: updatedSubscription.newspaper_id,
+          start_date: updatedSubscription.start_date.toISOString().split('T')[0],
+          end_date: updatedSubscription.end_date.toISOString().split('T')[0],
+          status: updatedSubscription.status,
+        }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        setSubscriptions(subscriptions.map(s => 
+          s.id === updatedSubscription.id ? result.data : s
+        ));
+        alert('订阅更新成功！');
+      } else {
+        alert(`更新失败: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('更新订阅失败:', error);
+      alert('更新订阅失败，请检查网络连接');
+    }
+  };
+
+  // 搜索功能
+  const handleSearch = async () => {
+    if (!searchKeyword.trim()) {
+      alert('请输入搜索关键词');
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const [subscribersRes, newspapersRes, subscriptionsRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/subscribers/search/${encodeURIComponent(searchKeyword)}`),
+        fetch(`${API_BASE_URL}/newspapers/search/${encodeURIComponent(searchKeyword)}`),
+        fetch(`${API_BASE_URL}/subscriptions/search/${encodeURIComponent(searchKeyword)}`)
+      ]);
+
+      const subscribersData = await subscribersRes.json();
+      const newspapersData = await newspapersRes.json();
+      const subscriptionsData = await subscriptionsRes.json();
+
+      setSearchResults({
+        subscribers: subscribersData.success ? subscribersData.data : [],
+        newspapers: newspapersData.success ? newspapersData.data : [],
+        subscriptions: subscriptionsData.success ? subscriptionsData.data : [],
+      });
+    } catch (error) {
+      console.error('搜索失败:', error);
+      alert('搜索失败，请检查网络连接');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // 清除搜索
+  const handleClearSearch = () => {
+    setSearchKeyword('');
+    setSearchResults({ subscribers: [], newspapers: [], subscriptions: [] });
+  };
+
+  // 获取当前显示的数据
+  const getDisplayData = () => {
+    if (searchKeyword.trim() && Object.values(searchResults).some(arr => arr.length > 0)) {
+      return {
+        subscribers: searchResults.subscribers,
+        newspapers: searchResults.newspapers,
+        subscriptions: searchResults.subscriptions,
+      };
+    }
+    return { subscribers, newspapers, subscriptions };
+  };
+
+  const displayData = getDisplayData();
 
   if (loading) {
     return (
@@ -138,7 +378,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>📰 订户订阅报刊管理系统</h1>
-        <p>一个简单的数据库课程设计项目</p>
+        <p>数据库课程设计项目</p>
       </header>
 
       <main className="App-main">
@@ -163,6 +403,43 @@ function App() {
           </button>
         </div>
 
+        {/* 搜索框 */}
+        <div className="search-container">
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="输入关键词搜索订户、报刊或订阅..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="search-input"
+            />
+            <button 
+              onClick={handleSearch} 
+              className="search-btn"
+              disabled={isSearching}
+            >
+              {isSearching ? '搜索中...' : '搜索'}
+            </button>
+            {searchKeyword && (
+              <button 
+                onClick={handleClearSearch} 
+                className="clear-search-btn"
+              >
+                清除
+              </button>
+            )}
+          </div>
+          {searchKeyword && (
+            <div className="search-info">
+              <p>
+                搜索关键词: <strong>"{searchKeyword}"</strong> | 
+                搜索结果: 订户({searchResults.subscribers.length}) 报刊({searchResults.newspapers.length}) 订阅({searchResults.subscriptions.length})
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="content">
           <div className="tab-header">
             <h2>
@@ -183,15 +460,27 @@ function App() {
           </div>
 
           {activeTab === 'subscribers' && (
-            <SubscriberList subscribers={subscribers} />
+            <SubscriberList 
+              subscribers={displayData.subscribers} 
+              onDelete={handleDeleteSubscriber}
+              onEdit={handleEditSubscriber}
+            />
           )}
 
           {activeTab === 'newspapers' && (
-            <NewspaperList newspapers={newspapers} />
+            <NewspaperList 
+              newspapers={displayData.newspapers} 
+              onDelete={handleDeleteNewspaper}
+              onEdit={handleEditNewspaper}
+            />
           )}
 
           {activeTab === 'subscriptions' && (
-            <SubscriptionList subscriptions={subscriptions} />
+            <SubscriptionList 
+              subscriptions={displayData.subscriptions} 
+              onDelete={handleDeleteSubscription}
+              onEdit={handleEditSubscription}
+            />
           )}
         </div>
 

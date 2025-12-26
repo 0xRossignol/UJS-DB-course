@@ -45,6 +45,7 @@ export function mapToSubscription(data: any): Subscription {
     subscriber_email: data.subscriber_email,
     newspaper_name: data.newspaper_name,
     publisher: data.publisher,
-    price: data.price ? parseFloat(data.price) : undefined,
+    // 注意：查询中价格字段的别名是 newspaper_price
+    price: data.newspaper_price ? parseFloat(data.newspaper_price) : (data.price ? parseFloat(data.price) : undefined),
   };
 }
